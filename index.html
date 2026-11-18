@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa de distribuidoras – Araraquara</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Inter,Arial,sans-serif;color:#1f2430;background:#f4f5f7}
+  .app{display:flex;height:100vh}
+  #map{flex:1;min-height:300px;background:#e8eaed}
+  aside{width:420px;display:flex;flex-direction:column;background:#fff;border-left:1px solid #e3e5ea}
+  header{padding:16px 16px 10px;border-bottom:1px solid #eef0f3}
+  h1{font-size:18px;margin:0 0 2px}
+  .sub{font-size:13px;color:#6b7280;margin:0 0 10px}
+  .prog{height:8px;background:#eef0f3;border-radius:6px;overflow:hidden}
+  .prog div{height:100%;background:#16a34a;width:0;transition:width .3s}
+  .progtxt{font-size:12px;color:#6b7280;margin-top:4px}
+  .tools{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .tools input{flex:1 1 100%;padding:9px 10px;border:1px solid #d6d9df;border-radius:8px;font-size:14px;font-family:inherit}
+  .chip{border:1px solid #d6d9df;background:#fff;border-radius:999px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit}
+  .chip.on{background:#1f2430;color:#fff;border-color:#1f2430}
+  #lista{flex:1;overflow-y:auto;padding:10px 12px 90px}
+  .item{display:flex;gap:10px;padding:10px;border-radius:12px;border:1px solid #eef0f3;margin-bottom:8px;background:#fff;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+  .item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .item.ativo{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.2)}
+  .item.feito{opacity:.6}
+  .item.feito .nome{text-decoration:line-through}
+  .thumb{width:76px;height:76px;flex:none;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:700;position:relative;overflow:hidden;border:0;cursor:pointer;font-family:inherit}
+  .thumb .n{font-size:24px;line-height:1}
+  .thumb .lbl{font-size:10px;font-weight:600;margin-top:6px;background:rgba(0,0,0,.25);padding:2px 6px;border-radius:999px}
+  .corpo{flex:1;min-width:0}
+  .nome{font-weight:700;font-size:14px}
+  .meta{font-size:12px;color:#6b7280;margin-top:2px}
+  .tipo{display:inline-block;font-size:11px;background:#f1f3f6;color:#4b5563;border-radius:6px;padding:1px 6px;margin-top:4px}
+  .linha{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+  .linha a,.linha button{font-size:12px;padding:5px 9px;border-radius:8px;border:1px solid #d6d9df;background:#fff;color:#2563eb;text-decoration:none;font-weight:600;cursor:pointer;font-family:inherit}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#374151;margin-right:auto}
+  .chk input{width:18px;height:18px}
+  .vou.on{background:#fff7d6;border-color:#f2c94c;color:#8a6100}
+  .barra{position:absolute;left:0;right:0;bottom:0;padding:12px;background:linear-gradient(transparent,#fff 30%)}
+  .barra button{width:100%;padding:13px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+  .barra button:disabled{background:#a7b0c0;cursor:default}
+  aside{position:relative}
+  .pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.35)}
+  .pin span{transform:rotate(45deg);color:#fff;font-size:12px;font-weight:700;font-family:Inter,Arial,sans-serif}
+  .pin.sel{outline:3px solid #2563eb}
+  .if{background:#111827;color:#fff;font-weight:700;font-size:11px;padding:4px 8px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,.35);text-align:center}
+  .modal{position:fixed;inset:0;background:rgba(17,24,39,.7);display:none;align-items:center;justify-content:center;z-index:2000;padding:16px}
+  .modal.on{display:flex}
+  .caixa{background:#fff;border-radius:14px;width:min(900px,100%);overflow:hidden}
+  .caixa .topo{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #eef0f3}
+  .caixa .topo b{font-size:15px}
+  .caixa .topo button{border:0;background:#f1f3f6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px}
+  .caixa iframe{width:100%;height:min(60vh,520px);border:0;display:block;background:#e8eaed}
+  .caixa .pe{padding:10px 14px;font-size:13px;color:#6b7280;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+  .caixa .pe a{color:#2563eb;font-weight:700}
+  .legenda{position:absolute;z-index:1000;left:10px;bottom:10px;background:#fff;border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .legenda i{display:inline-block;width:10px;height:10px;border-radius:50%;margin:0 4px 0 8px;vertical-align:middle}
+  .legenda i:first-child{margin-left:0}
+  .mapwrap{position:relative;flex:1;display:flex}
+  @media (max-width:800px){
+    .app{flex-direction:column;height:auto}
+    .mapwrap{height:45vh;flex:none}
+    aside{width:100%;border-left:0}
+    #lista{overflow:visible}
+    .barra{position:fixed}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="mapwrap"><div id="map"></div>
+    <div class="legenda"><i style="background:#2563eb"></i>Pendente<i style="background:#d97706"></i>Vou<i style="background:#16a34a"></i>Visitado</div>
+  </div>
+  <aside>
+    <header>
+      <h1>Distribuidoras e adegas · Araraquara</h1>
+      <p class="sub">Numeradas da mais perto para a mais longe do IFSP.</p>
+      <div class="prog"><div id="progbar"></div></div>
+      <div class="progtxt" id="progtxt"></div>
+      <div class="tools">
+        <input type="search" id="busca" placeholder="Buscar nome ou bairro">
+        <button class="chip on" data-f="todos">Todos</button>
+        <button class="chip" data-f="pend">Pendentes</button>
+        <button class="chip" data-f="vou">Vou</button>
+        <button class="chip" data-f="feito">Visitados</button>
+      </div>
+    </header>
+    <div id="lista"></div>
+    <div class="barra"><button id="rota" disabled>Marque "Vou" para montar a rota</button></div>
+  </aside>
+</div>
+
+<div class="modal" id="modal">
+  <div class="caixa">
+    <div class="topo"><b id="mtit"></b><button id="mfechar">Fechar ✕</button></div>
+    <iframe id="mframe" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <div class="pe"><span>Arraste a imagem para girar. Se não carregar, abra no Google Maps.</span><a id="mlink" target="_blank" rel="noopener">Abrir Street View no Google Maps</a></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const IF = [-21.7840096, -48.2107189];
+const MAXROTA = 10;
+const L_ = [{"n": "Distribuidora de Bebidas Nova Araraquara", "t": "Distribuidora", "e": "R. Luiz Paulillo, 196", "b": "Jardim Nova Araraquara", "km": 1.1, "tel": "(16) 99614-4283", "h": "Fecha seg; Dom até 15h", "r": 5.0, "nr": 72, "lat": -21.7759304, "lng": -48.2052612}, {"n": "Distribuidora Vale das Bebidas", "t": "Distribuidora", "e": "Av. Eng. Prudente Fernandes Monteiro", "b": "Parque Residencial Vale do Sol", "km": 1.7, "tel": "(16) 3010-6398", "h": "Fecha seg", "r": 3.3, "nr": 3, "lat": -21.7685044, "lng": -48.2079844}, {"n": "MB Distribuidora de Bebidas", "t": "Distribuidora", "e": "Av. Antônio Honório Real, 890", "b": "Parque Igaçaba / Vale do Sol", "km": 2.2, "tel": "(16) 3335-9678", "h": "Fecha seg; Dom até 14h", "r": 4.7, "nr": 128, "lat": -21.7672422, "lng": -48.1996562}, {"n": "Liderança Distribuidora e Tabacaria", "t": "Distribuidora/tabacaria", "e": "R. Dr. Mário Ópice, 339", "b": "Parque Igaçaba", "km": 2.4, "tel": "(16) 99606-9398", "h": "Todos os dias, 11h até 0h-2h", "r": 4.8, "nr": 12, "lat": -21.7685653, "lng": -48.1941376}, {"n": "Disbecar Comércio de Bebidas", "t": "Distribuidora", "e": "Av. Alfredo Coelho de Oliveira, 617", "b": "Jardim Quitandinha", "km": 2.5, "tel": "(16) 3332-3016", "h": "", "r": 5.0, "nr": 2, "lat": -21.8026701, "lng": -48.1964141}, {"n": "J.T. Distribuidora de Bebidas", "t": "Distribuidora", "e": "R. Bento Ramalho Machado, 310", "b": "Jardim Residencial Paraíso", "km": 2.6, "tel": "(16) 99747-9242", "h": "24h (fecha seg)", "r": 5.0, "nr": 2, "lat": -21.7663635, "lng": -48.1940378}, {"n": "Adega Hookah", "t": "Adega/tabacaria", "e": "R. Castro Alves, 1949", "b": "Jardim Morumbi", "km": 2.6, "tel": "(16) 99622-2982", "h": "13h-21h, fecha ter", "r": 4.8, "nr": 26, "lat": -21.7970323, "lng": -48.1897163}, {"n": "ICE BEER Distribuidora de Bebidas", "t": "Distribuidora", "e": "Av. Padre Francisco Salles Colturato, 463", "b": "Vila Nice", "km": 2.8, "tel": "(16) 99635-5740", "h": "Todos os dias, até 4h-5h", "r": 5.0, "nr": 31, "lat": -21.7804384, "lng": -48.183576}, {"n": "Distribuidora de Bebidas Navarro", "t": "Distribuidora (atacado)", "e": "R. Voluntários da Pátria, 3871", "b": "Jardim Santa Angelina", "km": 2.9, "tel": "(16) 3335-2323", "h": "Seg-sex, horário comercial (atacado)", "r": 4.9, "nr": 17, "lat": -21.7741924, "lng": -48.184384}, {"n": "BOX-A Conveniência", "t": "Conveniência", "e": "Av. São Geraldo, 976A", "b": "Centro", "km": 2.9, "tel": "(16) 99651-8092", "h": "Seg-sáb, fecha dom", "r": 5.0, "nr": 7, "lat": -21.7840043, "lng": -48.1827907}, {"n": "Distribuidora Planeta Água", "t": "Distribuidora (água/bebidas)", "e": "R. Manoel Rodrigues Jacob, 1747", "b": "Jardim Santa Angelina", "km": 3.0, "tel": "(16) 3335-7243", "h": "Todos os dias", "r": 4.8, "nr": 48, "lat": -21.7674402, "lng": -48.1875116}, {"n": "Disk Água Gelo Carvão Fest", "t": "Disk bebidas/gelo", "e": "Av. 15 de Novembro, 1591", "b": "Centro", "km": 3.1, "tel": "(16) 3332-6864", "h": "Todos os dias", "r": 4.7, "nr": 61, "lat": -21.79996, "lng": -48.1863539}, {"n": "echope Araraquara (Carmo)", "t": "Conveniência/delivery", "e": "Av. 7 de Setembro, 1151", "b": "Jardim do Carmo", "km": 3.5, "tel": "(16) 99161-4458", "h": "Fecha seg", "r": 4.7, "nr": 27, "lat": -21.7998903, "lng": -48.1817314}, {"n": "Girassol Distribuidora de Bebidas", "t": "Distribuidora", "e": "Av. José Cezarini", "b": "São José", "km": 4.0, "tel": "(16) 98201-4895", "h": "Tarde/noite, todos os dias", "r": 4.9, "nr": 15, "lat": -21.8066938, "lng": -48.1811989}, {"n": "Leve Fácil", "t": "Depósito de bebidas", "e": "Av. Antônio Nigro Sobrinho, 14", "b": "Jardim Ártico", "km": 4.5, "tel": "(16) 3413-7778", "h": "Seg-sáb, fecha dom", "r": 4.6, "nr": 636, "lat": -21.8090058, "lng": -48.1761815}, {"n": "Locomotiva Bebidas", "t": "Depósito de bebidas", "e": "Av. Vamberto Nogueira, 47", "b": "Vila Cidade Industrial (Vila Xavier)", "km": 4.5, "tel": "(16) 99705-8997", "h": "Todos os dias", "r": 4.9, "nr": 10, "lat": -21.7801338, "lng": -48.1668993}, {"n": "Dat Empório e Distribuidora de Bebidas", "t": "Adega/empório", "e": "Av. Padre José de Anchieta, 109", "b": "Vila Furlan", "km": 4.6, "tel": "(16) 3322-0170", "h": "Até 21h-23h", "r": 4.7, "nr": 126, "lat": -21.7989498, "lng": -48.1696579}, {"n": "Conveniência 22", "t": "Conveniência", "e": "Av. Vinte e Dois de Agosto, 479", "b": "Vila Xavier", "km": 4.6, "tel": "(16) 99718-5965", "h": "Todos os dias", "r": 4.9, "nr": 15, "lat": -21.7907643, "lng": -48.1667422}, {"n": "Entre Amigos Conveniência", "t": "Conveniência", "e": "Av. Orlando Schitini, 731", "b": "Jardim Maria Luiza IV", "km": 4.8, "tel": "(16) 3331-3195", "h": "Fecha seg", "r": 4.7, "nr": 53, "lat": -21.7440504, "lng": -48.1925717}, {"n": "Adega 7", "t": "Adega", "e": "Av. Dr. Adhemar Pereira de Barros, 550", "b": "Vila Suconasa", "km": 5.3, "tel": "(16) 98161-0211", "h": "16h-0h, fecha dom", "r": 4.6, "nr": 10, "lat": -21.8095811, "lng": -48.1671102}, {"n": "Adega Aliança do Sul", "t": "Adega/bar", "e": "Alameda Paulista, 1813", "b": "Jardim Paulistano (Vila Xavier)", "km": 5.4, "tel": "(16) 99746-1594", "h": "Todos os dias 16h-23h", "r": 4.6, "nr": 1648, "lat": -21.7761983, "lng": -48.1595056}, {"n": "Caravan Conveniência", "t": "Conveniência", "e": "Alameda Paulista, 1650", "b": "Vila Tito de Carvalho (Vila Xavier)", "km": 5.4, "tel": "(16) 3337-4555", "h": "Todos os dias 6h-23h45, drive-thru", "r": 4.4, "nr": 50, "lat": -21.7773216, "lng": -48.1589406}, {"n": "LK Distribuidora de Bebidas (Vila Melhado)", "t": "Distribuidora", "e": "Av. Dr. Adhemar Pereira de Barros, 202", "b": "Vila Melhado", "km": 5.4, "tel": "", "h": "Todos os dias, até 0h", "r": "", "nr": "", "lat": -21.8070995, "lng": -48.1651617}, {"n": "Vila Fest", "t": "Distribuidora (eventos/chopp)", "e": "Alameda Paulista, 313", "b": "Vila Xavier", "km": 5.5, "tel": "(16) 3463-1514", "h": "Seg-sáb (bebidas para eventos)", "r": 5.0, "nr": 96, "lat": -21.7894072, "lng": -48.15742}, {"n": "DK Bebidas Araraquara", "t": "Distribuidora/conveniência", "e": "Av. Alberto Santos Dumont, 605", "b": "Jardim Nova Época", "km": 5.7, "tel": "", "h": "Todos os dias", "r": 5.0, "nr": 11, "lat": -21.8039465, "lng": -48.1598249}, {"n": "RV Distribuidora", "t": "Distribuidora", "e": "Av. Estrada de Ferro Araraquara, 829", "b": "Jardim Paulistano (Vila Xavier)", "km": 5.8, "tel": "(16) 99767-1475", "h": "Todos os dias, até 22h-3h", "r": 4.8, "nr": 32, "lat": -21.7702671, "lng": -48.1565319}, {"n": "Zenith House (Lounge, Tabacaria e Adega)", "t": "Adega/tabacaria", "e": "Av. Francisco Vaz Filho, 2004", "b": "Jardim América", "km": 6.1, "tel": "(16) 99226-8424", "h": "Noite (19h30 em diante)", "r": 4.7, "nr": 7, "lat": -21.7798079, "lng": -48.1516239}, {"n": "DM Distribuidora (Laranjoca)", "t": "Distribuidora (sucos)", "e": "Av. Francisco Vaz Filho, 2205", "b": "Jardim Cristo Rei (Vila Xavier)", "km": 6.3, "tel": "(16) 99767-9583", "h": "Seg-sex (sucos)", "r": 5.0, "nr": 3, "lat": -21.7784923, "lng": -48.1501103}, {"n": "Esquina do Espeto", "t": "Adega/espetinho", "e": "R. Domingos Paulo Real, 89", "b": "Yolanda Ópice", "km": 6.8, "tel": "(16) 98165-8319", "h": "18h-0h, fecha dom", "r": "", "nr": "", "lat": -21.8008058, "lng": -48.1478413}, {"n": "Distribuidora Seu Madruga", "t": "Distribuidora", "e": "R. São José do Rio Preto, 1168", "b": "Parque Gramado II", "km": 6.9, "tel": "(16) 99744-7983", "h": "24 horas", "r": 4.6, "nr": 42, "lat": -21.7828001, "lng": -48.1439871}, {"n": "Distribuidora de bebidas (sem nome no Maps)", "t": "Distribuidora", "e": "R. Maurício Galli", "b": "Não informado", "km": 7.2, "tel": "", "h": "Todos os dias até 22h", "r": "", "nr": "", "lat": -21.743638, "lng": -48.1561051}, {"n": "Distribuidora de Bebidas do Júlio", "t": "Distribuidora", "e": "R. Bruno Opice Júnior", "b": "Jardim Cruzeiro do Sul", "km": 7.5, "tel": "(16) 99705-7949", "h": "Até 2h; 24h sex-dom", "r": 4.9, "nr": 31, "lat": -21.8109969, "lng": -48.1442774}, {"n": "Altas Horas Bebidas", "t": "Distribuidora", "e": "R. dos Eletricitários, 1396", "b": "Jardim Arco-Íris", "km": 7.9, "tel": "(16) 99756-0389", "h": "Todos os dias até 22h", "r": 4.9, "nr": 7, "lat": -21.8165533, "lng": -48.1432273}, {"n": "Casa das Bebidas", "t": "Depósito de bebidas", "e": "R. dos Eletricitários, 1640", "b": "Jardim Arco-Íris", "km": 8.1, "tel": "(16) 3472-2682", "h": "Todos os dias", "r": 4.7, "nr": 225, "lat": -21.8171032, "lng": -48.1405667}, {"n": "Adega do Nezinho", "t": "Adega", "e": "Av. Dionísio Tellaroli, 205", "b": "Jardim Indaiá", "km": 8.2, "tel": "", "h": "", "r": "", "nr": "", "lat": -21.7483257, "lng": -48.1412907}, {"n": "Adega N.S", "t": "Adega", "e": "Plus code 7RMF+76W", "b": "Não informado", "km": 8.3, "tel": "(16) 98101-7132", "h": "Todos os dias 7h-0h", "r": 5.0, "nr": 2, "lat": -21.7167625, "lng": -48.1769219}, {"n": "Distribuidora de Bebidas Carvalho", "t": "Distribuidora", "e": "Plus code 7RJG+X9C (CEP 14807-278)", "b": "Não informado", "km": 8.3, "tel": "(16) 99197-1426", "h": "Todos os dias, até 22h30-1h", "r": 5.0, "nr": 4, "lat": -21.7175625, "lng": -48.1740625}, {"n": "Adega dos Primo 3", "t": "Adega", "e": "Av. Sérgio Carvalho de Macedo, 197", "b": "Jardim São Rafael II", "km": 8.4, "tel": "(16) 99783-1920", "h": "24 horas", "r": 5.0, "nr": 3, "lat": -21.742943, "lng": -48.1430159}, {"n": "Empório Beer", "t": "Adega/empório", "e": "Av. Dr. Albert Einstein", "b": "Vila Xavier", "km": 8.4, "tel": "(16) 99749-4913", "h": "Fecha seg", "r": 4.8, "nr": 27, "lat": -21.7798086, "lng": -48.1297668}, {"n": "Adega Santo Grau 016", "t": "Adega", "e": "Av. Dionísio Tellaroli, 700", "b": "Jardim Indaiá", "km": 8.4, "tel": "", "h": "", "r": 5.0, "nr": 2, "lat": -21.743933, "lng": -48.1420388}, {"n": "Adega Toca Nordestina", "t": "Adega", "e": "R. Galileu Galilei, 1058", "b": "Parque São Paulo", "km": 8.6, "tel": "(16) 99111-4627", "h": "Fecha seg", "r": 4.6, "nr": 5, "lat": -21.7850791, "lng": -48.127017}, {"n": "Distribuidora Carioca Vale Verde", "t": "Distribuidora", "e": "Av. Leonardo Gomes, 1047", "b": "Vale Verde (provável)", "km": 8.6, "tel": "", "h": "", "r": 5.0, "nr": 1, "lat": -21.7249815, "lng": -48.1569453}, {"n": "Adega Lounge 69", "t": "Adega", "e": "Av. Leonardo Gomes", "b": "Vale Verde (provável)", "km": 8.7, "tel": "", "h": "24 horas", "r": 5.0, "nr": 1, "lat": -21.7230277, "lng": -48.1586219}, {"n": "Distribuidora de bebidas (sem nome no Maps)", "t": "Distribuidora", "e": "Av. José dos Santos Seves, 540", "b": "Jardim Roberto Selmi Dei", "km": 8.8, "tel": "(16) 3470-2042", "h": "", "r": 5.0, "nr": 2, "lat": -21.7261835, "lng": -48.1519651}, {"n": "Ramos Depósito de Bebidas", "t": "Depósito de bebidas", "e": "R. Eng. Marco Antônio Dentillo, 1115", "b": "Parque das Hortênsias", "km": 8.8, "tel": "", "h": "", "r": 5.0, "nr": 3, "lat": -21.8042582, "lng": -48.1282153}, {"n": "Adega & Tabacaria JK #40", "t": "Adega/tabacaria", "e": "Av. José dos Santos Seves, 939", "b": "Parque Residencial Laura Molina", "km": 8.8, "tel": "(16) 99793-3505", "h": "16h-23h/0h, fecha seg", "r": 4.5, "nr": 2, "lat": -21.7238533, "lng": -48.1547163}, {"n": "LK Distribuidora de Bebidas (Selmi Dei)", "t": "Distribuidora", "e": "Av. José dos Santos Seves, 951", "b": "Jardim Roberto Selmi Dei", "km": 8.9, "tel": "(16) 99706-0693", "h": "Tarde/noite", "r": 5.0, "nr": 3, "lat": -21.723677, "lng": -48.1548293}, {"n": "Armazém do Pedrão (Bebidas e Tabacaria)", "t": "Adega/tabacaria", "e": "Av. Badia Miguel Saba, 412", "b": "Jardim Iguatemi", "km": 9.0, "tel": "(16) 99757-4227", "h": "Todos os dias, até 23h-1h30", "r": 4.9, "nr": 27, "lat": -21.834478, "lng": -48.1423218}, {"n": "Empório Souza Distribuidora & Conveniência", "t": "Distribuidora", "e": "Av. Francisco Zavatti, 606", "b": "Conj. Hab. Victório de Santi", "km": 9.2, "tel": "", "h": "24 horas", "r": 5.0, "nr": 2, "lat": -21.8278554, "lng": -48.1356587}, {"n": "Eskinão das Bebidas", "t": "Distribuidora/mercearia", "e": "Av. Francisco Zavatti, 228", "b": "Jardim Victório Antônio de Santi II", "km": 9.3, "tel": "(16) 99600-5195", "h": "Todos os dias, até 0h-1h", "r": 5.0, "nr": 6, "lat": -21.8320417, "lng": -48.1373109}, {"n": "Tomaz Bebidas Distribuidora e Mercearia", "t": "Distribuidora/mercearia", "e": "Av. Pastor Odil de Paula Messias, 382", "b": "Residencial Alamedas (Vila Xavier)", "km": 9.5, "tel": "(16) 99790-0163", "h": "Todos os dias até 0h", "r": 5.0, "nr": 4, "lat": -21.7775703, "lng": -48.1189601}];
+const COR = {pend:"#2563eb", vou:"#d97706", feito:"#16a34a"};
+
+let st = {};
+try { st = JSON.parse(localStorage.getItem("araraquara_status") || "{}"); } catch(e) {}
+const salvar = () => { try { localStorage.setItem("araraquara_status", JSON.stringify(st)); } catch(e) {} };
+const estado = i => st[i] || "pend";
+let filtro = "todos", ativo = null;
+
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const kmTxt = k => String(k).replace(".", ",");
+const svUrl = l => "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + l.lat + "," + l.lng;
+const svEmbed = l => "https://www.google.com/maps?layer=c&cbll=" + l.lat + "," + l.lng + "&cbp=12,0,0,0,0&output=svembed";
+const waUrl = t => { const d = t.replace(/\D/g, ""); return (d.length === 11 && d[2] === "9") ? "https://wa.me/55" + d : null; };
+
+// mapa
+let map = null, markers = [];
+if (window.L) {
+  map = L.map("map", {zoomControl: true}).setView([-21.785, -48.17], 13);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19, subdomains: "abcd",
+    attribution: '&copy; OpenStreetMap &copy; CARTO'
+  }).addTo(map);
+  L.marker(IF, {icon: L.divIcon({className: "", html: '<div class="if">🎓 IFSP</div>', iconSize: [60, 24], iconAnchor: [30, 12]})}).addTo(map);
+  L_.forEach((l, i) => {
+    const m = L.marker([l.lat, l.lng], {icon: pinIcon(i)}).addTo(map);
+    m.bindPopup(() => '<b>' + (i + 1) + '. ' + esc(l.n) + '</b><br>' + esc(l.b) + ' · ' + kmTxt(l.km) + ' km');
+    m.on("click", () => selecionar(i, false));
+    markers.push(m);
+  });
+  map.fitBounds(L.latLngBounds(L_.map(l => [l.lat, l.lng]).concat([IF])), {padding: [30, 30]});
+} else {
+  document.getElementById("map").innerHTML = '<div style="padding:20px;color:#6b7280">O mapa não carregou neste visualizador. A lista funciona normalmente.</div>';
+}
+
+function pinIcon(i) {
+  return L.divIcon({className: "", html: '<div class="pin' + (ativo === i ? ' sel' : '') + '" style="background:' + COR[estado(i)] + '"><span>' + (i + 1) + '</span></div>', iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -28]});
+}
+function atualizaPin(i) { if (markers[i]) markers[i].setIcon(pinIcon(i)); }
+
+function render() {
+  const q = document.getElementById("busca").value.toLowerCase();
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+  L_.forEach((l, i) => {
+    const e = estado(i);
+    if (filtro !== "todos" && e !== filtro) return;
+    if (q && !(l.n + " " + l.b).toLowerCase().includes(q)) return;
+    const wa = l.tel ? waUrl(l.tel) : null;
+    const d = document.createElement("div");
+    d.className = "item" + (e === "feito" ? " feito" : "") + (ativo === i ? " ativo" : "");
+    d.id = "it" + i;
+    d.innerHTML =
+      '<button class="thumb" data-sv="' + i + '" style="background:linear-gradient(135deg,' + COR[e] + ',#1f2430)" title="Ver fachada">' +
+        '<span class="n">' + (i + 1) + '</span><span class="lbl">📷 Fachada</span></button>' +
+      '<div class="corpo">' +
+        '<div class="nome">' + esc(l.n) + '</div>' +
+        '<div class="meta">' + esc(l.e) + ' · ' + esc(l.b) + '</div>' +
+        '<div class="meta">' + kmTxt(l.km) + ' km do IF' + (l.r ? ' · ★ ' + kmTxt(l.r) + ' (' + l.nr + ')' : '') + (l.h ? ' · ' + esc(l.h) : '') + '</div>' +
+        '<span class="tipo">' + esc(l.t) + '</span>' +
+        '<div class="linha">' +
+          '<label class="chk"><input type="checkbox" data-feito="' + i + '"' + (e === "feito" ? " checked" : "") + '> Visitado</label>' +
+          '<button class="vou' + (e === "vou" ? " on" : "") + '" data-vou="' + i + '">' + (e === "vou" ? "★ Vou" : "☆ Vou") + '</button>' +
+          '<a href="https://waze.com/ul?ll=' + l.lat + ',' + l.lng + '&navigate=yes" target="_blank" rel="noopener">Waze</a>' +
+          (wa ? '<a href="' + wa + '" target="_blank" rel="noopener">WhatsApp</a>' : (l.tel ? '<a href="tel:' + l.tel.replace(/\D/g, "") + '">' + esc(l.tel) + '</a>' : '')) +
+        '</div>' +
+      '</div>';
+    lista.appendChild(d);
+  });
+  progresso();
+}
+
+function progresso() {
+  const tot = L_.length;
+  const f = L_.filter((_, i) => estado(i) === "feito").length;
+  const v = L_.filter((_, i) => estado(i) === "vou").length;
+  document.getElementById("progbar").style.width = (f / tot * 100) + "%";
+  document.getElementById("progtxt").textContent = f + " de " + tot + " visitados · " + v + " marcados como \"Vou\"";
+  const b = document.getElementById("rota");
+  b.disabled = v === 0 || v > MAXROTA;
+  b.textContent = v === 0 ? 'Marque "Vou" para montar a rota'
+    : v > MAXROTA ? v + ' marcados (a rota aceita até ' + MAXROTA + ')'
+    : 'Abrir rota no Google Maps (' + v + ' parada' + (v > 1 ? 's' : '') + ')';
+}
+
+function setEstado(i, e) {
+  if (e === "pend") delete st[i]; else st[i] = e;
+  salvar(); atualizaPin(i); render();
+}
+
+function selecionar(i, voar) {
+  const ant = ativo; ativo = i;
+  if (ant !== null) atualizaPin(ant);
+  atualizaPin(i);
+  if (map && voar) {
+    if (window.innerWidth <= 800) window.scrollTo({top: 0, behavior: "smooth"});
+    map.flyTo([L_[i].lat, L_[i].lng], 16, {duration: .6}); markers[i].openPopup();
+  }
+  document.querySelectorAll(".item.ativo").forEach(x => x.classList.remove("ativo"));
+  const el = document.getElementById("it" + i);
+  if (el) { el.classList.add("ativo"); if (!voar) el.scrollIntoView({behavior: "smooth", block: "center"}); }
+}
+
+function abrirSV(i) {
+  window.open(svUrl(L_[i]), "_blank");
+}
+function abrirSVModalAntigo(i) {
+  const l = L_[i];
+  document.getElementById("mtit").textContent = (i + 1) + ". " + l.n;
+  document.getElementById("mframe").src = svEmbed(l);
+  document.getElementById("mlink").href = svUrl(l);
+  document.getElementById("modal").classList.add("on");
+}
+function fecharSV() { document.getElementById("modal").classList.remove("on"); document.getElementById("mframe").src = "about:blank"; }
+
+document.getElementById("lista").addEventListener("click", ev => {
+  const t = ev.target;
+  const sv = t.closest("[data-sv]");
+  if (sv) { abrirSV(+sv.dataset.sv); return; }
+  if (t.dataset.vou !== undefined) { const i = +t.dataset.vou; setEstado(i, estado(i) === "vou" ? "pend" : "vou"); return; }
+  if (t.closest("a,label,input")) return;
+  const it = t.closest(".item");
+  if (it) selecionar(+it.id.slice(2), true);
+});
+document.getElementById("lista").addEventListener("change", ev => {
+  const i = ev.target.dataset.feito;
+  if (i !== undefined) setEstado(+i, ev.target.checked ? "feito" : "pend");
+});
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach(x => x.classList.remove("on"));
+  c.classList.add("on"); filtro = c.dataset.f; render();
+}));
+document.getElementById("busca").addEventListener("input", render);
+document.getElementById("mfechar").addEventListener("click", fecharSV);
+document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") fecharSV(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") fecharSV(); });
+
+document.getElementById("rota").addEventListener("click", () => {
+  const pts = L_.map((l, i) => ({l, i})).filter(x => estado(x.i) === "vou").sort((a, b) => a.l.km - b.l.km).map(x => x.l.lat + "," + x.l.lng);
+  if (!pts.length || pts.length > MAXROTA) return;
+  let url = "https://www.google.com/maps/dir/?api=1&travelmode=driving&origin=" + IF.join(",") + "&destination=" + pts[pts.length - 1];
+  if (pts.length > 1) url += "&waypoints=" + encodeURIComponent(pts.slice(0, -1).join("|"));
+  window.open(url, "_blank");
+});
+
+render();
+</script>
+</body>
+</html>
