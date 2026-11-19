@@ -29,7 +29,10 @@
   .item.feito{opacity:.6}
   .item.feito .nome{text-decoration:line-through}
   .thumb{width:76px;height:76px;flex:none;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-weight:700;position:relative;overflow:hidden;border:0;cursor:pointer;font-family:inherit}
-  .thumb .n{font-size:24px;line-height:1}
+  .thumb{background-color:#334155;background-repeat:no-repeat}
+  .thumb::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.55))}
+  .thumb .n,.thumb .lbl{position:relative}
+  .thumb .n{font-size:24px;line-height:1;text-shadow:0 1px 3px rgba(0,0,0,.6)}
   .thumb .lbl{font-size:10px;font-weight:600;margin-top:6px;background:rgba(0,0,0,.25);padding:2px 6px;border-radius:999px}
   .corpo{flex:1;min-width:0}
   .nome{font-weight:700;font-size:14px}
@@ -57,6 +60,9 @@
   .caixa .topo{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #eef0f3}
   .caixa .topo b{font-size:15px}
   .caixa .topo button{border:0;background:#f1f3f6;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:14px}
+  .abas{display:flex;gap:6px;padding:8px 14px 0}
+  .aba{border:1px solid #d6d9df;background:#fff;border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+  .aba.on{background:#1f2430;color:#fff;border-color:#1f2430}
   .caixa iframe{width:100%;height:min(60vh,520px);border:0;display:block;background:#e8eaed}
   .caixa .pe{padding:10px 14px;font-size:13px;color:#6b7280;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
   .caixa .pe a{color:#2563eb;font-weight:700}
@@ -101,8 +107,9 @@
 <div class="modal" id="modal">
   <div class="caixa">
     <div class="topo"><b id="mtit"></b><button id="mfechar">Fechar ✕</button></div>
+    <div class="abas"><button class="aba on" data-aba="sv">Street View</button><button class="aba" data-aba="sat">Satélite</button></div>
     <iframe id="mframe" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
-    <div class="pe"><span>Arraste a imagem para girar. Se não carregar, abra no Google Maps.</span><a id="mlink" target="_blank" rel="noopener">Abrir Street View no Google Maps</a></div>
+    <div class="pe"><span id="mdica">Arraste para girar. Às vezes o Google mostra uma foto de dentro de um lugar vizinho; aí use as setas ou abra no Maps.</span><a id="mlink" target="_blank" rel="noopener">Abrir Street View no Google Maps</a></div>
   </div>
 </div>
 
@@ -123,6 +130,15 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const kmTxt = k => String(k).replace(".", ",");
 const svUrl = l => "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + l.lat + "," + l.lng;
 const svEmbed = l => "https://www.google.com/maps?layer=c&cbll=" + l.lat + "," + l.lng + "&cbp=12,0,0,0,0&output=svembed";
+const svEmbed2 = l => "https://maps.google.com/maps?q=&layer=c&cbll=" + l.lat + "," + l.lng + "&cbp=11,0,0,0,0&output=svembed";
+const satEmbed = l => "https://maps.google.com/maps?q=" + l.lat + "," + l.lng + "&t=k&z=19&output=embed";
+function satBg(l) {
+  const z = 18, n = 2 ** z, r = l.lat * Math.PI / 180;
+  const fx = (l.lng + 180) / 360 * n, fy = (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * n;
+  const x = Math.floor(fx), y = Math.floor(fy);
+  const S = 512, px = (fx - x) * S, py = (fy - y) * S;
+  return "background-image:url(https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + y + "/" + x + ");background-size:" + S + "px " + S + "px;background-position:" + (38 - px).toFixed(0) + "px " + (38 - py).toFixed(0) + "px";
+}
 const waUrl = t => { const d = t.replace(/\D/g, ""); return (d.length === 11 && d[2] === "9") ? "https://wa.me/55" + d : null; };
 
 // mapa
@@ -163,7 +179,7 @@ function render() {
     d.className = "item" + (e === "feito" ? " feito" : "") + (e === "nao" ? " nao" : "") + (ativo === i ? " ativo" : "");
     d.id = "it" + i;
     d.innerHTML =
-      '<button class="thumb" data-sv="' + i + '" style="background:linear-gradient(135deg,' + COR[e] + ',#1f2430)" title="Ver fachada">' +
+      '<button class="thumb" data-sv="' + i + '" style="' + satBg(l) + ';box-shadow:inset 0 0 0 3px ' + COR[e] + '" title="Ver fachada">' +
         '<span class="n">' + (i + 1) + '</span><span class="lbl">📷 Fachada</span></button>' +
       '<div class="corpo">' +
         '<div class="nome">' + esc(l.n) + '</div>' +
@@ -215,13 +231,18 @@ function selecionar(i, voar) {
   if (el) { el.classList.add("ativo"); if (!voar) el.scrollIntoView({behavior: "smooth", block: "center"}); }
 }
 
-function abrirSV(i) {
-  window.open(svUrl(L_[i]), "_blank");
+let svAtual = null;
+function mostrarAba(a) {
+  document.querySelectorAll(".aba").forEach(b => b.classList.toggle("on", b.dataset.aba === a));
+  const l = L_[svAtual];
+  document.getElementById("mframe").src = a === "sv" ? svEmbed2(l) : satEmbed(l);
+  document.getElementById("mdica").style.visibility = a === "sv" ? "visible" : "hidden";
 }
-function abrirSVModalAntigo(i) {
+function abrirSV(i) {
+  svAtual = i;
   const l = L_[i];
   document.getElementById("mtit").textContent = (i + 1) + ". " + l.n;
-  document.getElementById("mframe").src = svEmbed(l);
+  mostrarAba("sv");
   document.getElementById("mlink").href = svUrl(l);
   document.getElementById("modal").classList.add("on");
 }
@@ -247,6 +268,7 @@ document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () =
 }));
 document.getElementById("busca").addEventListener("input", render);
 document.getElementById("mfechar").addEventListener("click", fecharSV);
+document.querySelectorAll(".aba").forEach(b => b.addEventListener("click", () => mostrarAba(b.dataset.aba)));
 document.getElementById("modal").addEventListener("click", e => { if (e.target.id === "modal") fecharSV(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") fecharSV(); });
 
